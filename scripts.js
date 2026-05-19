@@ -2,7 +2,10 @@
 // ── PRODUCTS DATA ──
 const products = [
   // Mobiliario
-  { id:1, name:'Silla Tiffany Blanca', category:'Mobiliario', price:8000, unit:'c/u', desc:'Elegante silla Tiffany de resina, ideal para ceremonias y banquetes. Resistente y liviana.', icon:'🪑', img:"fotos/celular.jpg" },
+  { id:1, name:'Silla Tiffany Blanca', category:'Mobiliario', price:8000, unit:'c/u', 
+    desc:'Elegante silla Tiffany de resina, ideal para ceremonias y banquetes. Resistente y liviana.', icon:'🪑', 
+    img:'photos/celular.jpg', 
+    imgs:['photos/celular.jpg', 'photos/bici.jpg', 'photos/carita.jpg']},
   { id:2, name:'Mesa Redonda 180cm', category:'Mobiliario', price:25000, unit:'c/u', desc:'Mesa redonda de madera pintada en blanco, incluye tela de mantel premium hasta el piso.', icon:'🪵' },
   { id:3, name:'Silla Ghost Cristal', category:'Mobiliario', price:12000, unit:'c/u', desc:'Silla de policarbonato transparente, diseño moderno y sofisticado para eventos de lujo.', icon:'💎' },
   { id:4, name:'Barra de Cóctel Alta', category:'Mobiliario', price:45000, unit:'c/u', desc:'Mesa alta tipo bar con cubierta de mármol sintético. Perfecta para cócteles y brindis.', icon:'🍸' },
@@ -39,7 +42,7 @@ let cart = {};
 let activeCategory = 'Todos';
 
 // ── RENDER PRODUCTS ──
-function renderProducts(list) {
+function renderProducts_0(list) {
   const grid = document.getElementById('productGrid');
   const noRes = document.getElementById('noResults');
   grid.innerHTML = '';
@@ -51,22 +54,128 @@ function renderProducts(list) {
     const col = document.createElement('div');
     col.className = 'col-12 col-sm-6 col-lg-4';
     col.setAttribute('data-category', p.category);
+    //<span>${p.icon}</span>
     col.innerHTML = `
-      <div class="product-card">
-        <div class="product-img">
-          <span>${p.icon}</span>
-          <div class="product-category-tag">${p.category}</div>
+        <div class="product-card">
+            <div class="product-img-container" style="position: relative; width: 100%; height: 250px; background: #21201f; display: flex; align-items: center; justify-content: center;">
+            
+            <!-- Imagen con el manejador onerror que la oculta si falla -->
+            <img src="${p.img}" class="product-img" alt="${p.name}" 
+                style="width: 100%; height: 100%; object-fit: cover;"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            
+            <!-- Icono de respaldo (oculto por defecto, se muestra si la imagen falla) -->
+            <div class="fallback-icon" style="display: none; font-size: 3rem; color: #bc9c82;">
+                ${p.icon}
+            </div>
+            
+            <div class="product-category-tag">${p.category}</div>
+            </div>
+            <div class="product-body">
+            <div class="product-name">${p.name}</div>
+            <div class="product-desc">${p.desc}</div>
+            <div class="product-price">$${p.price.toLocaleString('es-AR')} <span>/ ${p.unit}</span></div>
+            <button class="add-btn ${inCart ? 'added' : ''}" id="btn-${p.id}" onclick="addToCart(${p.id})">
+                <i class="bi ${inCart ? 'bi-check2' : 'bi-plus-lg'}"></i>
+                ${inCart ? 'En mi Lista' : 'Agregar a Lista'}
+            </button>
+            </div>
+        </div>`;
+    grid.appendChild(col);
+  });
+}
+
+function renderProducts(list) {
+    console.info("entra")
+  const grid = document.getElementById('productGrid');
+  const noRes = document.getElementById('noResults');
+  grid.innerHTML = '';
+  if (!list.length) { noRes.classList.remove('d-none'); return; }
+  noRes.classList.add('d-none');
+
+  list.forEach(p => {
+    const inCart = cart[p.id];
+    const col = document.createElement('div');
+    col.className = 'col-12 col-sm-6 col-lg-4';
+    col.setAttribute('data-category', p.category);
+    
+    const carouselId = `carousel-prod-${p.id}`;
+
+    // Generamos los elementos de las imágenes para el carrusel
+    console.error("salio mal")
+    const carouselItems = p.imgs ? p.imgs.map((imgUrl, index) => {
+    return `
+        <div class="carousel-item ${index === 0 ? 'active' : ''}">
+            <div class="product-img-container" style="position: relative; width: 100%; height: 250px; background: #2d2c30; display: flex; align-items: center; justify-content: center;">
+                <img src="${imgUrl}" class="d-block w-100" alt="${p.name} - Vista ${index + 1}"
+                    style="height: 100%; object-fit: cover;"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="fallback-icon" style="display: none; font-size: 3rem; color: #bc9c82;">
+                ${p.icon}
+                </div>
+            </div>
+            </div>
+        `;
+    }).join(''): `
+    <!-- Si no hay ninguna imagen, mostramos el icono por defecto de inmediato -->
+    <div class="carousel-item active">
+      <div class="product-img-container" style="width: 100%; height: 250px; background: #0e0e12; display: flex; align-items: center; justify-content: center;">
+        <div class="fallback-icon" style="font-size: 3rem; color: #bc9c82;">
+          ${p.icon}
         </div>
-        <div class="product-body">
-          <div class="product-name">${p.name}</div>
-          <div class="product-desc">${p.desc}</div>
-          <div class="product-price">$${p.price.toLocaleString('es-AR')} <span>/ ${p.unit}</span></div>
-          <button class="add-btn ${inCart ? 'added' : ''}" id="btn-${p.id}" onclick="addToCart(${p.id})">
+      </div>
+    </div>
+  `;
+
+  col.innerHTML = `
+    <div class="product-card shadow-sm bg-white">
+        
+        <!-- Carrusel de Bootstrap -->
+        <div id="${carouselId}" class="carousel slide" data-bs-ride="false">
+        
+        <!-- Indicadores (puntitos abajo) -->
+        <div class="carousel-indicators">
+          ${(p.imgs || []).map((_, index) => `
+            <button type="button" data-bs-target="#${carouselId}" data-bs-slide-to="${index}" class="${index === 0 ? 'active' : ''}"></button>
+        `).join('')}
+        </div>
+
+        <!-- Contenedor de las imágenes -->
+        <div class="carousel-inner">
+            ${carouselItems}
+        </div>
+
+        <!-- Controles Flecha Izquierda -->
+        <button class="carousel-control-prev" type="button" data-bs-target="#${carouselId}" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true" style="filter: invert(100%);"></span>
+            <span class="visually-hidden">Anterior</span>
+        </button>
+
+        <!-- Controles Flecha Derecha -->
+        <button class="carousel-control-next" type="button" data-bs-target="#${carouselId}" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true" style="filter: invert(100%);"></span>
+            <span class="visually-hidden">Siguiente</span>
+        </button>
+
+        <div class="product-category-tag" style="position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,0.9); padding: 3px 10px; font-size: 0.8rem; letter-spacing: 1px; text-uppercase;">
+            ${p.category}
+        </div>
+        </div>
+
+        <!-- Cuerpo de la Tarjeta -->
+        <div class="product-body p-3 text-center">
+        <div class="product-name fw-light text-uppercase mb-1" style="letter-spacing: 1px; font-size: 1.1rem;">${p.name}</div>
+        <div class="product-desc text-muted small mb-3">${p.desc}</div>
+        <div class="product-price mb-3 fw-bold" style="color: #bc9c82;">
+            $${p.price.toLocaleString('es-AR')} <span class="fw-light text-muted" style="font-size: 0.8rem;">/ ${p.unit}</span>
+        </div>
+        <button class="add-btn w-100 ${inCart ? 'added' : ''}" id="btn-${p.id}" onclick="addToCart(${p.id})">
             <i class="bi ${inCart ? 'bi-check2' : 'bi-plus-lg'}"></i>
             ${inCart ? 'En mi Lista' : 'Agregar a Lista'}
-          </button>
+        </button>
         </div>
-      </div>`;
+    </div>`;
+
     grid.appendChild(col);
   });
 }
